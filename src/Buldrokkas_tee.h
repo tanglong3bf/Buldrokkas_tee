@@ -54,11 +54,9 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @version 0.0.2
  */
 #pragma once
-
-#include "AuthExprCalc.h"
 
 #include <drogon/HttpTypes.h>
 #include <drogon/plugins/Plugin.h>
@@ -149,7 +147,7 @@ class UserServiceBase : public virtual drogon::DrObjectBase
      *  @return User info.
      *  @throws std::runtime_error User not found.
      */
-    virtual const User &loadUserByUsername(
+    virtual User loadUserByUsername(
         const std::string &username) const = 0;
 
     /**

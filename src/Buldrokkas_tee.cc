@@ -4,6 +4,7 @@
  *
  */
 
+#include "AuthExprCalc.h"
 #include "Buldrokkas_tee.h"
 #include <drogon/HttpAppFramework.h>
 #include <drogon/HttpResponse.h>
@@ -122,7 +123,7 @@ class InMemoryUserService : public UserService<InMemoryUserService>
     }
 
   public:
-    const User &loadUserByUsername(const string &username) const override
+    User loadUserByUsername(const string &username) const override
     {
         if (users_.find(username) == users_.end())
         {
@@ -430,12 +431,13 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
 {
     /// Register various types to the class map.
     auto passwordEncoderName =
-        config.get("passwordEncoder", "tl::secure::NonePasswordEncoder")
+        config.get("password_encoder", "tl::secure::NonePasswordEncoder")
             .asString();
     DrClassMap::registerClass("tl::secure::PasswordEncoderBase",
                               PasswordEncoderBase::map.at(passwordEncoderName));
     auto userServiceName =
-        config.get("userService", "tl::secure::InMemoryUserService").asString();
+        config.get("user_service", "tl::secure::InMemoryUserService")
+            .asString();
     DrClassMap::registerClass("tl::secure::UserServiceBase",
                               UserServiceBase::map.at(userServiceName));
     auto authenticationName =

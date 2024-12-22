@@ -1,6 +1,8 @@
 #include <string>
 
 #include "AuthExprCalc.h"
+#include <algorithm>
+#include <stdexcept>
 
 using namespace std;
 using namespace tl::secure;
