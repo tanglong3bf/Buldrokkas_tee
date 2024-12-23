@@ -17,7 +17,8 @@
           user_service: tl::secure::InMemoryUserService
           # Only valid when user_service is "tl::secure::InMemoryUserService" If
           # user_list is not set, the default username is "admin123", the
-          # default password is "123456", and the default authorities is [].
+          # default password is "123456", and the default authorities is
+          # ["ROLE_admin"].
           user_list:
             - username: admin123
               password: "123456"
@@ -36,8 +37,11 @@
           # You can inherit `tl::secure::Authentication` implements the custom
           # authentication, just change this item to your custom class name.
           authentication: tl::secure::DefaultAuthentication
+          # The default login check filter will use BASIC authentication. You
+          # can modify this item to use a user-defined filter.
+          login_check_filter: tl::secure::DefaultLoginCheckFilter
           # The path in this array will not be subject to authentication
-          control.
+          # control.
           exempt:
             - "^/.*\.(?:js|css)$"
           # Path authority configuration, "path" and "auth_expression" are
@@ -57,7 +61,7 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.1.0
+ *  @version 0.2.0
  */
 #pragma once
 

@@ -245,9 +245,6 @@ class DefaultAuthentication : public Authentication<DefaultAuthentication>
  *  @class DefaultLoginCheckFilter
  *  @brief Default login check filter.
  *
- *  TODO: Specify a custom login check filter through the configuration item
- * `login_check_filter`.
- *
  *  @author tanglong3bf
  *  @date 2024-12-18
  *  @since 0.0.1
@@ -563,7 +560,9 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
 
     /// Get the filters.
     vector<string> filterNames;
-    filterNames.emplace_back("tl::secure::DefaultLoginCheckFilter");
+    filterNames.emplace_back(
+        config.get("login_check_filter", "tl::secure::DefaultLoginCheckFilter")
+            .asString());
     filterNames.emplace_back("tl::secure::AuthorityCheckFilter");
 
     for (const auto &filterName : filterNames)
