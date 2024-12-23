@@ -36,11 +36,14 @@
           # You can inherit `tl::secure::Authentication` implements the custom
           # authentication, just change this item to your custom class name.
           authentication: tl::secure::DefaultAuthentication
-          # TODO: NOT SUPPORT YET
-          white_list: []
+          # The path in this array will not be subject to authentication
+          control.
+          exempt:
+            - "^/.*\.(?:js|css)$"
           # Path authority configuration, "path" and "auth_expression" are
-          # required, "methods" is optional If "methods" is not set, all methods
-          # are subject to authentication control by default. Default value: []
+          # required, "methods" is optional. If "methods" is not set, all
+          # methods are subject to authentication control by default. Default
+          # value: []
           path_authorities:
             - path: "/test"
               methods: "GET"
@@ -54,7 +57,7 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.2
+ *  @version 0.1.0
  */
 #pragma once
 
@@ -62,6 +65,7 @@
 #include <drogon/plugins/Plugin.h>
 #include <drogon/utils/Utilities.h>
 #include <drogon/HttpFilter.h>
+#include <regex>
 
 namespace tl::secure
 {
@@ -70,7 +74,7 @@ namespace tl::secure
  *  @class User
  *
  *  @details Used internally by the plugin to represent user information,
- * including username, password, role, and permissions.
+ * including username, password, role, and authorities.
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
@@ -135,7 +139,7 @@ class User
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 class UserServiceBase : public virtual drogon::DrObjectBase
 {
@@ -147,8 +151,7 @@ class UserServiceBase : public virtual drogon::DrObjectBase
      *  @return User info.
      *  @throws std::runtime_error User not found.
      */
-    virtual User loadUserByUsername(
-        const std::string &username) const = 0;
+    virtual User loadUserByUsername(const std::string &username) const = 0;
 
     /**
      *  Return current class type name.
@@ -192,7 +195,7 @@ class UserServiceBase : public virtual drogon::DrObjectBase
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  *
  *  @see UserServiceBase
  *  @see InMemoryUserService
@@ -317,7 +320,7 @@ class PasswordEncoderBase : public virtual drogon::DrObjectBase
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  *
  *  @see PasswordEncoderBase
  *  @see NonePasswordEncoder
@@ -434,7 +437,7 @@ class AuthenticationBase : public virtual drogon::DrObjectBase
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  *
  *  @see AuthenticationBase
  *  @see DefaultAuthentication
@@ -509,5 +512,7 @@ class Buldrokkas_tee : public drogon::Plugin<Buldrokkas_tee>,
     std::shared_ptr<UserServiceBase> userService_;
     std::shared_ptr<PasswordEncoderBase> passwordEncoder_;
     std::vector<std::shared_ptr<drogon::HttpFilterBase>> filters_;
+    std::regex exemptPegex_;
+    bool regexFlag_{false};
 };
 };  // namespace tl::secure

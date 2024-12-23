@@ -113,7 +113,7 @@ namespace tl::secure
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 class InMemoryUserService : public UserService<InMemoryUserService>
 {
@@ -152,7 +152,7 @@ class InMemoryUserService : public UserService<InMemoryUserService>
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 class NonePasswordEncoder : public PasswordEncoder<NonePasswordEncoder>
 {
@@ -179,7 +179,7 @@ class NonePasswordEncoder : public PasswordEncoder<NonePasswordEncoder>
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 class Md5PasswordEncoder : public PasswordEncoder<Md5PasswordEncoder>
 {
@@ -206,7 +206,7 @@ class Md5PasswordEncoder : public PasswordEncoder<Md5PasswordEncoder>
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 class DefaultAuthentication : public Authentication<DefaultAuthentication>
 {
@@ -250,7 +250,7 @@ class DefaultAuthentication : public Authentication<DefaultAuthentication>
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 class DefaultLoginCheckFilter
     : public drogon::HttpFilter<DefaultLoginCheckFilter>
@@ -318,7 +318,7 @@ class DefaultLoginCheckFilter
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
 struct AuthExprCalcItem
 {
@@ -330,17 +330,17 @@ struct AuthExprCalcItem
 };
 
 /**
- *  @class PermissionCheckFilter
- *  @brief Permission check filter.
+ *  @class AuthorityCheckFilter
+ *  @brief Authority check filter.
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.1
+ *  @since 0.0.1
  */
-class PermissionCheckFilter : public drogon::HttpFilter<PermissionCheckFilter>
+class AuthorityCheckFilter : public drogon::HttpFilter<AuthorityCheckFilter>
 {
   public:
-    PermissionCheckFilter()
+    AuthorityCheckFilter()
     {
     }
 
@@ -505,7 +505,7 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
     }
 
     /// Set path authorities.
-    unordered_map<string, AuthExprCalcItem> permExprCalcs;
+    unordered_map<string, AuthExprCalcItem> authExprCalcs;
     if (config.isMember("path_authorities") &&
         config["path_authorities"].isArray())
     {
@@ -547,14 +547,14 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
                 {
                     for (const auto &method : methods)
                     {
-                        permExprCalcs[path].calculators[method] = calculator;
+                        authExprCalcs[path].calculators[method] = calculator;
                     }
                 }
                 else
                 {
                     for (int i = 0; i < Invalid; i++)
                     {
-                        permExprCalcs[path].calculators[i] = calculator;
+                        authExprCalcs[path].calculators[i] = calculator;
                     }
                 }
             }
@@ -564,7 +564,7 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
     /// Get the filters.
     vector<string> filterNames;
     filterNames.emplace_back("tl::secure::DefaultLoginCheckFilter");
-    filterNames.emplace_back("tl::secure::PermissionCheckFilter");
+    filterNames.emplace_back("tl::secure::AuthorityCheckFilter");
 
     for (const auto &filterName : filterNames)
     {
@@ -575,12 +575,48 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
             LOG_ERROR << "Filter " << filterName << " not found!";
             continue;
         }
-        else if (filterName == "tl::secure::PermissionCheckFilter")
+        else if (filterName == "tl::secure::AuthorityCheckFilter")
         {
-            dynamic_pointer_cast<PermissionCheckFilter>(filterPtr)
-                ->setAuthExprCalcs(permExprCalcs);
+            dynamic_pointer_cast<AuthorityCheckFilter>(filterPtr)
+                ->setAuthExprCalcs(authExprCalcs);
         }
         filters_.push_back(filterPtr);
+    }
+
+    /// Get the exempt paths.
+    if (config.isMember("exempt"))
+    {
+        auto exempt = config["exempt"];
+        if (exempt.isArray())
+        {
+            std::string regexStr;
+            for (auto const &ex : exempt)
+            {
+                if (ex.isString())
+                {
+                    regexStr.append("(?:").append(ex.asString()).append(")|");
+                }
+                else
+                {
+                    LOG_ERROR << "exempt must be a string array!";
+                }
+            }
+            if (!regexStr.empty())
+            {
+                regexStr.pop_back();
+                exemptPegex_ = std::regex(regexStr);
+                regexFlag_ = true;
+            }
+        }
+        else if (exempt.isString())
+        {
+            exemptPegex_ = std::regex(exempt.asString());
+            regexFlag_ = true;
+        }
+        else
+        {
+            LOG_ERROR << "exempt must be a string or string array!";
+        }
     }
 
     /// Register the filters to the app
@@ -593,6 +629,14 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
         {
             accb();
             return;
+        }
+        if (thisPtr->regexFlag_)
+        {
+            if (std::regex_match(req->path(), thisPtr->exemptPegex_))
+            {
+                accb();
+                return;
+            }
         }
 
         middlewares_function::doFilters(

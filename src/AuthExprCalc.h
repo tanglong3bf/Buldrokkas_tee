@@ -5,7 +5,6 @@
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.0.2
  */
 #pragma once
 
@@ -117,9 +116,9 @@ class AuthExprCalc
   public:
     /**
      *  Constructor.
-     *  @param permExpr Authority expression to be calculated.
+     *  @param authExpr Authority expression to be calculated.
      */
-    AuthExprCalc(const std::string &permExpr);
+    AuthExprCalc(const std::string &authExpr);
 
     /**
      *  Calculate the result of authority expression.
