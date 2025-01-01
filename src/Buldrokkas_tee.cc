@@ -481,24 +481,24 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
             req->attributes()->get<vector<string>>("authorities");
         auto path = req->path();
         auto method = req->method();
-        auto it = authExprCalcs_.find(path);
-        if (it == authExprCalcs_.end())
+        for (const auto &item : authExprCalcs_)
         {
-            accb();
-        }
-        else
-        {
-            auto &item = it->second;
-            auto &calculator = item.calculators[method];
-            if (!calculator || calculator->calc(authorities))
+            std::regex regex(item.first);
+            if (std::regex_match(req->path(), regex))
             {
-                accb();
-            }
-            else
-            {
-                acb(HttpResponse::newHttpResponse(k403Forbidden, CT_NONE));
+                auto &it = item.second;
+                auto &calculator = it.calculators[method];
+                if (!calculator || calculator->calc(authorities))
+                {
+                    accb();
+                }
+                else
+                {
+                    acb(HttpResponse::newHttpResponse(k403Forbidden, CT_NONE));
+                }
             }
         }
+        accb();
     });
 }
 

@@ -54,7 +54,7 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.3.0
+ *  @version 0.3.1
  */
 #pragma once
 
