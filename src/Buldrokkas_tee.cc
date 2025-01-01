@@ -414,13 +414,13 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
             if (!regexStr.empty())
             {
                 regexStr.pop_back();
-                exemptPegex_ = std::regex(regexStr);
+                exemptRegex_ = std::regex(regexStr);
                 regexFlag_ = true;
             }
         }
         else if (exempt.isString())
         {
-            exemptPegex_ = std::regex(exempt.asString());
+            exemptRegex_ = std::regex(exempt.asString());
             regexFlag_ = true;
         }
         else

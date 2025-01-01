@@ -54,7 +54,7 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.3.1
+ *  @version 0.3.2
  */
 #pragma once
 
@@ -443,7 +443,7 @@ class Buldrokkas_tee : public drogon::Plugin<Buldrokkas_tee>,
     std::function<std::optional<User>(const drogon::HttpRequestPtr &)>
         loginCheckHandler_;
 
-    std::regex exemptPegex_;
+    std::regex exemptRegex_;
     bool regexFlag_{false};
 };
 };  // namespace tl::secure
