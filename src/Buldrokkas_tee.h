@@ -33,13 +33,6 @@
           # You can inherit `tl::secure::PasswordEncoder` implements the custom
           # password encoder, just change this item to your custom class name.
           password_encoder: tl::secure::NonePasswordEncoder
-          # Authentication. Default value: "tl::secure::DefaultAuthentication"
-          # You can inherit `tl::secure::Authentication` implements the custom
-          # authentication, just change this item to your custom class name.
-          authentication: tl::secure::DefaultAuthentication
-          # The default login check filter will use BASIC authentication. You
-          # can modify this item to use a user-defined filter.
-          login_check_filter: tl::secure::DefaultLoginCheckFilter
           # The path in this array will not be subject to authentication
           # control.
           exempt:
@@ -61,10 +54,11 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.2.0
+ *  @version 0.3.0
  */
 #pragma once
 
+#include "AuthExprCalc.h"
 #include <drogon/HttpTypes.h>
 #include <drogon/plugins/Plugin.h>
 #include <drogon/utils/Utilities.h>
@@ -374,120 +368,45 @@ template <typename T>
 typename PasswordEncoder<T>::Emm PasswordEncoder<T>::emm;
 
 /**
- *  @class AuthenticationBase
- *
- *  @brief The base of authentication.
- *  @details Defines the authentication interface.
+ *  @class Authentication
  *
  *  @author tanglong3bf
- *  @date 2024-12-18
- *  @since 0.0.1
+ *  @date 2025-01-01
+ *  @since 0.3.0
  */
-class AuthenticationBase : public virtual drogon::DrObjectBase
+class Authentication
 {
   public:
-    /**
-     *  Authenticate user.
-     *
-     *  @param username
-     *  @param password
-     *  @return User info if authentication succeeds.
-     *  @throws std::runtime_error Authentication failed.
-     */
-    virtual User authenticate(const std::string &username,
-                              const std::string &password) const = 0;
+    Authentication();
 
+  public:
     /**
-     *  Return current class type name.
-     *
-     *  @return Current class type name("tl::secure::AuthenticationBase")
+     *  Authenticate user by username and password.
      */
-    static const std::string &classTypeName();
-    /**
-     *  Stores multiple lambda expressions that can create instances of
-     * `Authentication` subclasses
-     *
-     *
-     *  @note `Authentication` will register real types to this map.
-     */
-    static std::map<std::string, std::function<AuthenticationBase *(void)>> map;
+    std::optional<User> authenticate(const std::string &username,
+                                     const std::string &password) const;
+
+  private:
+    std::shared_ptr<UserServiceBase> userService_;
+    std::shared_ptr<PasswordEncoderBase> passwordEncoder_;
 };
 
 /**
- *  @class Authentication
- *
- *  @brief Authentication class.
- *  @details Inherits from `AuthenticationBase`. If you want to implement a
- *  custom authentication, you can inherit this class.
- *
- *  Example code:
- *  @code
-    class MyAuthentication : public Authentication<MyAuthentication>
-    {
-      public:
-        MyAuthentication()
-        {
-        }
-      public:
-        User authenticate(const std::string &username
-                          const std::string &password) const override
-        {
-            // Implementing custom authentication logic
-        }
-    };
- *  @endcode
- *
- *  @tparam T The type of the implementation class.
+ *  @class AuthExprCalcItem
+ *  @brief Authority Expression Calculator Item
  *
  *  @author tanglong3bf
  *  @date 2024-12-18
  *  @since 0.0.1
- *
- *  @see AuthenticationBase
- *  @see DefaultAuthentication
  */
-template <typename T>
-class Authentication : public AuthenticationBase, public drogon::DrObject<T>
+struct AuthExprCalcItem
 {
-  public:
     /**
-     *  Do not automatically create an instance.
-     *  @see drogon::DrObject<T>
+     *  @brief Different request methods of the same path are calculated
+     *  separately, and array subscripts are distinguished by HttpMethod.
      */
-    static constexpr bool isAutoCreation{false};
-
-  private:
-    class Emm
-    {
-      public:
-        Emm()
-        {
-            setLambda();
-        }
-
-        const std::string &className() const
-        {
-            static std::string className =
-                drogon::DrClassMap::demangle(typeid(T).name());
-            return className;
-        }
-
-        void setLambda()
-        {
-            map[className()] = [] { return new T; };
-        }
-    };
-
-    static Emm emm;
-
-    virtual void *touch()
-    {
-        return &emm;
-    }
+    std::shared_ptr<AuthExprCalc> calculators[drogon::Invalid]{nullptr};
 };
-
-template <typename T>
-typename Authentication<T>::Emm Authentication<T>::emm;
 
 /**
  *  @class Buldrokkas_tee
@@ -504,6 +423,10 @@ class Buldrokkas_tee : public drogon::Plugin<Buldrokkas_tee>,
   public:
     Buldrokkas_tee() = default;
 
+    void registerLoginCheckHandler(
+        std::function<std::optional<User>(const drogon::HttpRequestPtr &)>
+            handler);
+
     /// This method must be called by drogon to initialize and start the
     /// plugin. It must be implemented by the user.
     void initAndStart(const Json::Value &) override;
@@ -515,7 +438,11 @@ class Buldrokkas_tee : public drogon::Plugin<Buldrokkas_tee>,
   private:
     std::shared_ptr<UserServiceBase> userService_;
     std::shared_ptr<PasswordEncoderBase> passwordEncoder_;
-    std::vector<std::shared_ptr<drogon::HttpFilterBase>> filters_;
+    Authentication authentication_;
+    std::unordered_map<std::string, AuthExprCalcItem> authExprCalcs_;
+    std::function<std::optional<User>(const drogon::HttpRequestPtr &)>
+        loginCheckHandler_;
+
     std::regex exemptPegex_;
     bool regexFlag_{false};
 };

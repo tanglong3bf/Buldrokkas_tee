@@ -4,7 +4,6 @@
  *
  */
 
-#include "AuthExprCalc.h"
 #include "Buldrokkas_tee.h"
 #include <drogon/HttpAppFramework.h>
 #include <drogon/HttpResponse.h>
@@ -41,16 +40,9 @@ const string &PasswordEncoderBase::classTypeName()
     return classTypeName;
 }
 
-const string &AuthenticationBase::classTypeName()
-{
-    static string classTypeName("tl::secure::AuthenticationBase");
-    return classTypeName;
-}
-
 map<string, function<UserServiceBase *(void)>> UserServiceBase::map = {};
 map<string, function<PasswordEncoderBase *(void)>> PasswordEncoderBase::map =
     {};
-map<string, function<AuthenticationBase *(void)>> AuthenticationBase::map = {};
 
 User::User(const string &username, const string &password)
     : username_(username), password_(password)
@@ -199,191 +191,38 @@ class Md5PasswordEncoder : public PasswordEncoder<Md5PasswordEncoder>
         return getMd5(raw) == encoded;
     }
 };
-
-/**
- *  @class DefaultAuthentication
- *  @brief Check username and password with the user service.
- *
- *  @author tanglong3bf
- *  @date 2024-12-18
- *  @since 0.0.1
- */
-class DefaultAuthentication : public Authentication<DefaultAuthentication>
-{
-  public:
-    DefaultAuthentication()
-        : userService_(DrClassMap::getSingleInstance<UserServiceBase>()),
-          passwordEncoder_(DrClassMap::getSingleInstance<PasswordEncoderBase>())
-    {
-    }
-
-  public:
-    User authenticate(const string &username,
-                      const string &password) const override
-    {
-        try
-        {
-            auto user = userService_->loadUserByUsername(username);
-            if (passwordEncoder_->matches(password, user.password()))
-            {
-                return user;
-            }
-        }
-        catch (const exception &e)
-        {
-            LOG_ERROR << e.what();
-        }
-        throw runtime_error("Authentication failed");
-    }
-
-  private:
-    shared_ptr<UserServiceBase> userService_;
-    shared_ptr<PasswordEncoderBase> passwordEncoder_;
-};
-
-/**
- *  @class DefaultLoginCheckFilter
- *  @brief Default login check filter.
- *
- *  @author tanglong3bf
- *  @date 2024-12-18
- *  @since 0.0.1
- */
-class DefaultLoginCheckFilter
-    : public drogon::HttpFilter<DefaultLoginCheckFilter>
-{
-  public:
-    DefaultLoginCheckFilter()
-        : authentication_(DrClassMap::getSingleInstance<AuthenticationBase>())
-    {
-    }
-
-    /**
-     *  @brief Utilize Basic authenticaion to check whether the user is logged
-     *  in.
-     *  If authentication is successful, the user information will be stored
-     *  in the request attributes.
-     *  If authentication fails, a 401 Unauthorized response will be returned.
-     */
-    void doFilter(const HttpRequestPtr &req,
-                  FilterCallback &&fcb,
-                  FilterChainCallback &&fccb)
-    {
-        auto notLoginHandler = [fcb]() {
-            auto resp =
-                HttpResponse::newHttpResponse(k401Unauthorized, CT_NONE);
-            resp->addHeader("WWW-Authenticate", "Basic realm=\"Realm\"");
-            fcb(resp);
-        };
-        if (req->headers().count("authorization") == 0)
-        {
-            notLoginHandler();
-            return;
-        }
-        auto authorization = req->headers().at("authorization");
-        if (authorization.find("Basic ") != 0)
-        {
-            notLoginHandler();
-            return;
-        }
-        auto token = authorization.substr(6);
-        auto usernamePasswordStr = base64Decode(token);
-        auto usernamePasswordVec = splitString(usernamePasswordStr, ":");
-        try
-        {
-            auto user = authentication_->authenticate(usernamePasswordVec[0],
-                                                      usernamePasswordVec[1]);
-            req->attributes()->insert("user", user);
-            req->attributes()->insert("authorities", user.authorities());
-            fccb();
-            return;
-        }
-        catch (const exception &e)
-        {
-            LOG_ERROR << e.what();
-        }
-        notLoginHandler();
-    }
-
-  private:
-    shared_ptr<AuthenticationBase> authentication_;
-};
-
-/**
- *  @class AuthExprCalcItem
- *  @brief Authority Expression Calculator Item
- *
- *  @author tanglong3bf
- *  @date 2024-12-18
- *  @since 0.0.1
- */
-struct AuthExprCalcItem
-{
-    /**
-     *  @brief Different request methods of the same path are calculated
-     *  separately, and array subscripts are distinguished by HttpMethod.
-     */
-    shared_ptr<AuthExprCalc> calculators[drogon::Invalid]{nullptr};
-};
-
-/**
- *  @class AuthorityCheckFilter
- *  @brief Authority check filter.
- *
- *  @author tanglong3bf
- *  @date 2024-12-18
- *  @since 0.0.1
- */
-class AuthorityCheckFilter : public drogon::HttpFilter<AuthorityCheckFilter>
-{
-  public:
-    AuthorityCheckFilter()
-    {
-    }
-
-    void doFilter(const HttpRequestPtr &req,
-                  FilterCallback &&fcb,
-                  FilterChainCallback &&fccb)
-    {
-        if (!req->attributes()->find("authorities"))
-        {
-            fcb(HttpResponse::newHttpResponse(k401Unauthorized, CT_NONE));
-            return;
-        }
-        vector<string> authorities =
-            req->attributes()->get<vector<string>>("authorities");
-        auto path = req->path();
-        auto method = req->method();
-        auto it = authExprCalcs_.find(path);
-        if (it == authExprCalcs_.end())
-        {
-            fccb();
-        }
-        else
-        {
-            auto &item = it->second;
-            auto &calculator = item.calculators[method];
-            if (!calculator || calculator->calc(authorities))
-            {
-                fccb();
-            }
-            else
-            {
-                fcb(HttpResponse::newHttpResponse(k403Forbidden, CT_NONE));
-            }
-        }
-    }
-
-    void setAuthExprCalcs(
-        const unordered_map<string, AuthExprCalcItem> &authExprCalcs)
-    {
-        authExprCalcs_ = authExprCalcs;
-    }
-
-  private:
-    unordered_map<string, AuthExprCalcItem> authExprCalcs_;
-};
 };  // namespace tl::secure
+
+Authentication::Authentication()
+    : userService_(drogon::DrClassMap::getSingleInstance<UserServiceBase>()),
+      passwordEncoder_(
+          drogon::DrClassMap::getSingleInstance<PasswordEncoderBase>())
+{
+}
+
+optional<User> Authentication::authenticate(const std::string &username,
+                                            const std::string &password) const
+{
+    try
+    {
+        auto user = userService_->loadUserByUsername(username);
+        if (passwordEncoder_->matches(password, user.password()))
+        {
+            return user;
+        }
+    }
+    catch (const std::exception &e)
+    {
+        LOG_ERROR << e.what();
+    }
+    return nullopt;
+}
+
+void Buldrokkas_tee::registerLoginCheckHandler(
+    function<optional<User>(const HttpRequestPtr &)> handler)
+{
+    loginCheckHandler_ = handler;
+}
 
 HttpMethod fromStringToHttpMethod(const string &methodStr)
 {
@@ -437,10 +276,6 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
             .asString();
     DrClassMap::registerClass("tl::secure::UserServiceBase",
                               UserServiceBase::map.at(userServiceName));
-    auto authenticationName =
-        config.get("authentication", "tl::secure::Authentication").asString();
-    DrClassMap::registerClass("tl::secure::AuthenticationBase",
-                              AuthenticationBase::map.at(authenticationName));
 
     passwordEncoder_ = DrClassMap::getSingleInstance<PasswordEncoderBase>();
     userService_ = DrClassMap::getSingleInstance<UserServiceBase>();
@@ -558,30 +393,6 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
         }
     }
 
-    /// Get the filters.
-    vector<string> filterNames;
-    filterNames.emplace_back(
-        config.get("login_check_filter", "tl::secure::DefaultLoginCheckFilter")
-            .asString());
-    filterNames.emplace_back("tl::secure::AuthorityCheckFilter");
-
-    for (const auto &filterName : filterNames)
-    {
-        auto filterPtr = dynamic_pointer_cast<HttpFilterBase>(
-            DrClassMap::getSingleInstance(filterName));
-        if (!filterPtr)
-        {
-            LOG_ERROR << "Filter " << filterName << " not found!";
-            continue;
-        }
-        else if (filterName == "tl::secure::AuthorityCheckFilter")
-        {
-            dynamic_pointer_cast<AuthorityCheckFilter>(filterPtr)
-                ->setAuthExprCalcs(authExprCalcs);
-        }
-        filters_.push_back(filterPtr);
-    }
-
     /// Get the exempt paths.
     if (config.isMember("exempt"))
     {
@@ -618,31 +429,76 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
         }
     }
 
-    /// Register the filters to the app
-    weak_ptr<Buldrokkas_tee> weakPtr = shared_from_this();
-    app().registerPreRoutingAdvice([weakPtr](const HttpRequestPtr &req,
-                                             AdviceCallback &&acb,
-                                             AdviceChainCallback &&accb) {
-        auto thisPtr = weakPtr.lock();
-        if (!thisPtr)
+    /// Register a pre-routing advice to check the authentication.
+    app().registerPreRoutingAdvice([this](const HttpRequestPtr &req,
+                                          AdviceCallback &&acb,
+                                          AdviceChainCallback &&accb) {
+        if (!loginCheckHandler_)
         {
-            accb();
+            loginCheckHandler_ =
+                [this](const HttpRequestPtr &req) -> optional<User> {
+                if (req->headers().count("authorization") == 0)
+                {
+                    return nullopt;
+                }
+                auto authorization = req->headers().at("authorization");
+                if (authorization.find("Basic ") != 0)
+                {
+                    return nullopt;
+                }
+                auto token = authorization.substr(6);
+                auto usernamePasswordStr = base64Decode(token);
+                auto usernamePasswordVec =
+                    splitString(usernamePasswordStr, ":");
+                return authentication_.authenticate(usernamePasswordVec[0],
+                                                    usernamePasswordVec[1]);
+            };
+        }
+        auto user = loginCheckHandler_(req);
+        if (!user)
+        {
+            auto resp =
+                HttpResponse::newHttpResponse(k401Unauthorized, CT_NONE);
+            resp->addHeader("WWW-Authenticate", "Basic realm=\"Realm\"");
+            acb(resp);
             return;
         }
-        if (thisPtr->regexFlag_)
+        req->attributes()->insert("user", *user);
+        req->attributes()->insert("authorities", user->authorities());
+        accb();
+    });
+
+    /// Register a pre-routing advice to check the path authorities.
+    app().registerPreRoutingAdvice([this](const HttpRequestPtr &req,
+                                          AdviceCallback &&acb,
+                                          AdviceChainCallback &&accb) {
+        if (!req->attributes()->find("authorities"))
         {
-            if (std::regex_match(req->path(), thisPtr->exemptPegex_))
+            acb(HttpResponse::newHttpResponse(k401Unauthorized, CT_NONE));
+            return;
+        }
+        vector<string> authorities =
+            req->attributes()->get<vector<string>>("authorities");
+        auto path = req->path();
+        auto method = req->method();
+        auto it = authExprCalcs_.find(path);
+        if (it == authExprCalcs_.end())
+        {
+            accb();
+        }
+        else
+        {
+            auto &item = it->second;
+            auto &calculator = item.calculators[method];
+            if (!calculator || calculator->calc(authorities))
             {
                 accb();
-                return;
+            }
+            else
+            {
+                acb(HttpResponse::newHttpResponse(k403Forbidden, CT_NONE));
             }
         }
-
-        middlewares_function::doFilters(
-            thisPtr->filters_,
-            static_pointer_cast<HttpRequestImpl>(req),
-            [acb = std::move(acb), accb = std::move(accb)](
-                const HttpResponsePtr &resp) { resp ? acb(resp) : accb(); });
     });
 }
 
