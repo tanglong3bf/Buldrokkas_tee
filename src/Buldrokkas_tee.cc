@@ -6,27 +6,11 @@
 
 #include "Buldrokkas_tee.h"
 #include <drogon/HttpAppFramework.h>
-#include <drogon/HttpResponse.h>
 
 using namespace ::std;
 using namespace ::drogon;
 using namespace ::drogon::utils;
 using namespace ::tl::secure;
-
-namespace drogon
-{
-class HttpRequestImpl : public HttpRequest
-{
-};
-
-namespace middlewares_function
-{
-using HttpRequestImplPtr = shared_ptr<HttpRequestImpl>;
-void doFilters(const vector<shared_ptr<HttpFilterBase>> &filters,
-               const HttpRequestImplPtr &req,
-               function<void(const HttpResponsePtr &)> &&callback);
-}  // namespace middlewares_function
-}  // namespace drogon
 
 const string &UserServiceBase::classTypeName()
 {
@@ -39,10 +23,6 @@ const string &PasswordEncoderBase::classTypeName()
     static string classTypeName("tl::secure::PasswordEncoderBase");
     return classTypeName;
 }
-
-map<string, function<UserServiceBase *(void)>> UserServiceBase::map = {};
-map<string, function<PasswordEncoderBase *(void)>> PasswordEncoderBase::map =
-    {};
 
 User::User(const string &username, const string &password)
     : username_(username), password_(password)
@@ -270,12 +250,13 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
         config.get("password_encoder", "tl::secure::NonePasswordEncoder")
             .asString();
     DrClassMap::registerClass("tl::secure::PasswordEncoderBase",
-                              PasswordEncoderBase::map.at(passwordEncoderName));
+                              PasswordEncoderBase::getMap().at(
+                                  passwordEncoderName));
     auto userServiceName =
         config.get("user_service", "tl::secure::InMemoryUserService")
             .asString();
     DrClassMap::registerClass("tl::secure::UserServiceBase",
-                              UserServiceBase::map.at(userServiceName));
+                              UserServiceBase::getMap().at(userServiceName));
 
     passwordEncoder_ = DrClassMap::getSingleInstance<PasswordEncoderBase>();
     userService_ = DrClassMap::getSingleInstance<UserServiceBase>();

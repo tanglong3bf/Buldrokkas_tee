@@ -53,8 +53,8 @@
  *  @details The built-in User class, UserService class, PasswordEncoder class,
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
- *  @date 2024-12-18
- *  @version 0.3.3
+ *  @date 2025-01-02
+ *  @version 0.3.4
  */
 #pragma once
 
@@ -151,19 +151,28 @@ class UserServiceBase : public virtual drogon::DrObjectBase
      */
     virtual User loadUserByUsername(const std::string &username) const = 0;
 
+  protected:
     /**
      *  Return current class type name.
      *
      *  @return Current class type name("tl::secure::UserServiceBase")
      */
     static const std::string &classTypeName();
+
     /**
      *  Stores multiple lambda expressions that can create instances of
      *  `UserService` subclasses
      *
      *  @note `UserService` will register real types to this map.
      */
-    static std::map<std::string, std::function<UserServiceBase *(void)>> map;
+    static auto &getMap()
+    {
+        static std::map<std::string, std::function<UserServiceBase *(void)>>
+            map;
+        return map;
+    }
+    friend class Buldrokkas_tee;
+    friend class drogon::DrClassMap;
 };
 
 /**
@@ -214,7 +223,7 @@ class UserService : public UserServiceBase, public drogon::DrObject<T>
       public:
         Emm()
         {
-            setLambda();
+            getMap()[className()] = [] { return new T; };
         }
 
         const std::string &className() const
@@ -222,11 +231,6 @@ class UserService : public UserServiceBase, public drogon::DrObject<T>
             static std::string className =
                 drogon::DrClassMap::demangle(typeid(T).name());
             return className;
-        }
-
-        void setLambda()
-        {
-            map[className()] = [] { return new T; };
         }
     };
 
@@ -270,20 +274,28 @@ class PasswordEncoderBase : public virtual drogon::DrObjectBase
     virtual bool matches(const std::string &raw,
                          const std::string &encoded) const = 0;
 
+  protected:
     /**
      *  Return current class type name.
      *
      *  @return Current class type name("tl::secure::PasswordEncoderBase")
      */
     static const std::string &classTypeName();
+
     /**
      *  Stores multiple lambda expressions that can create instances of
      *  `PasswordEncoder` subclasses
      *
      *  @note `PasswordEncoder` will register real types to this map.
      */
-    static std::map<std::string, std::function<PasswordEncoderBase *(void)>>
-        map;
+    static auto &getMap()
+    {
+        static std::map<std::string, std::function<PasswordEncoderBase *(void)>>
+            map;
+        return map;
+    }
+    friend class Buldrokkas_tee;
+    friend class drogon::DrClassMap;
 };
 
 /**
@@ -340,7 +352,7 @@ class PasswordEncoder : public PasswordEncoderBase, public drogon::DrObject<T>
       public:
         Emm()
         {
-            setLambda();
+            getMap()[className()] = [] { return new T; };
         }
 
         const std::string &className() const
@@ -348,11 +360,6 @@ class PasswordEncoder : public PasswordEncoderBase, public drogon::DrObject<T>
             static std::string className =
                 drogon::DrClassMap::demangle(typeid(T).name());
             return className;
-        }
-
-        void setLambda()
-        {
-            map[className()] = [] { return new T; };
         }
     };
 
