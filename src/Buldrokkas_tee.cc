@@ -279,6 +279,7 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
 
     passwordEncoder_ = DrClassMap::getSingleInstance<PasswordEncoderBase>();
     userService_ = DrClassMap::getSingleInstance<UserServiceBase>();
+    authentication_ = make_shared<Authentication>();
 
     /// If it is memory user service, initialize the user list.
     if (userServiceName == "tl::secure::InMemoryUserService")
@@ -450,8 +451,8 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
                 auto usernamePasswordStr = base64Decode(token);
                 auto usernamePasswordVec =
                     splitString(usernamePasswordStr, ":");
-                return authentication_.authenticate(usernamePasswordVec[0],
-                                                    usernamePasswordVec[1]);
+                return authentication_->authenticate(usernamePasswordVec[0],
+                                                     usernamePasswordVec[1]);
             };
         }
         auto user = loginCheckHandler_(req);

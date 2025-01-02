@@ -54,7 +54,7 @@
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
  *  @date 2024-12-18
- *  @version 0.3.2
+ *  @version 0.3.3
  */
 #pragma once
 
@@ -438,7 +438,7 @@ class Buldrokkas_tee : public drogon::Plugin<Buldrokkas_tee>,
   private:
     std::shared_ptr<UserServiceBase> userService_;
     std::shared_ptr<PasswordEncoderBase> passwordEncoder_;
-    Authentication authentication_;
+    std::shared_ptr<Authentication> authentication_;
     std::unordered_map<std::string, AuthExprCalcItem> authExprCalcs_;
     std::function<std::optional<User>(const drogon::HttpRequestPtr &)>
         loginCheckHandler_;
