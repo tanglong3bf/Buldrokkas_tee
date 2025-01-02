@@ -415,6 +415,11 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
     app().registerPreRoutingAdvice([this](const HttpRequestPtr &req,
                                           AdviceCallback &&acb,
                                           AdviceChainCallback &&accb) {
+        if (regexFlag_ && std::regex_match(req->path(), exemptRegex_))
+        {
+            accb();
+            return;
+        }
         if (!loginCheckHandler_)
         {
             loginCheckHandler_ =
@@ -454,6 +459,11 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
     app().registerPreRoutingAdvice([this](const HttpRequestPtr &req,
                                           AdviceCallback &&acb,
                                           AdviceChainCallback &&accb) {
+        if (regexFlag_ && std::regex_match(req->path(), exemptRegex_))
+        {
+            accb();
+            return;
+        }
         if (!req->attributes()->find("authorities"))
         {
             acb(HttpResponse::newHttpResponse(k401Unauthorized, CT_NONE));
