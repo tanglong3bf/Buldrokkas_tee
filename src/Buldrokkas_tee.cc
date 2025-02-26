@@ -319,7 +319,6 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
     }
 
     /// Set path authorities.
-    unordered_map<string, AuthExprCalcItem> authExprCalcs;
     if (config.isMember("path_authorities") &&
         config["path_authorities"].isArray())
     {
@@ -361,14 +360,14 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
                 {
                     for (const auto &method : methods)
                     {
-                        authExprCalcs[path].calculators[method] = calculator;
+                        authExprCalcs_[path].calculators[method] = calculator;
                     }
                 }
                 else
                 {
                     for (int i = 0; i < Invalid; i++)
                     {
-                        authExprCalcs[path].calculators[i] = calculator;
+                        authExprCalcs_[path].calculators[i] = calculator;
                     }
                 }
             }
@@ -488,6 +487,7 @@ void Buldrokkas_tee::initAndStart(const Json::Value &config)
                 {
                     acb(HttpResponse::newHttpResponse(k403Forbidden, CT_NONE));
                 }
+                return;
             }
         }
         accb();

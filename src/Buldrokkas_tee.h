@@ -53,8 +53,8 @@
  *  @details The built-in User class, UserService class, PasswordEncoder class,
  *  Authentication class, and Buldrokkas_tee class are defined.
  *  @author tanglong3bf
- *  @date 2025-01-02
- *  @version 0.3.5
+ *  @date 2025-02-28
+ *  @version 0.3.7
  */
 #pragma once
 
@@ -420,7 +420,7 @@ struct AuthExprCalcItem
  *  @brief Buldrokkas_tee plug-in.
  *  @details Inherit from `drogon::Plugin` and provides authorization management
  *  @author tanglong3bf
- *  @date 2024-12-18
+ *  @date 2025-02-26
  *  @since 0.0.1
  */
 class Buldrokkas_tee : public drogon::Plugin<Buldrokkas_tee>,

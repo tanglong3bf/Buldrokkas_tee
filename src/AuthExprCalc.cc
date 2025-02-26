@@ -137,13 +137,25 @@ bool Lexer::done()
     return pos_ == expr_.size();
 }
 
+void tl::secure::Lexer::reset()
+{
+    pos_ = 0;
+}
+
 AuthExprCalc::AuthExprCalc(const string &expr) : lexer_(expr)
 {
+    reset();
+}
+
+void tl::secure::AuthExprCalc::reset()
+{
+    lexer_.reset();
     ahead_ = lexer_.next();
 }
 
 bool AuthExprCalc::calc(const vector<string> &authorities)
 {
+    reset();
     auto result = expr(authorities);
     if (lexer_.done())
         return result;

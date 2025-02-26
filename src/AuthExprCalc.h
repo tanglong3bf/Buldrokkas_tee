@@ -4,7 +4,7 @@
  *  calculator `AuthExprCalc`.
  *
  *  @author tanglong3bf
- *  @date 2024-12-18
+ *  @date 2025-02-28
  */
 #pragma once
 
@@ -69,7 +69,7 @@ class Token
  * `Token`s.
  *
  *  @author tanglong3bf
- *  @date 2024.12.18
+ *  @date 2025.02.28
  *  @since 0.0.1
  *
  *  @see Token
@@ -97,6 +97,13 @@ class Lexer
      */
     bool done();
 
+    /**
+     * @brief Reset the lexer.
+     * @date 2025.02.27
+     * @since 0.3.7
+     */
+    void reset();
+
   private:
     std::string expr_;
     int pos_{0};
@@ -108,34 +115,44 @@ class Lexer
  *  @details This class calculates the result of authority expression.
  *
  *  @author tanglong3bf
- *  @date 2024.12.18
+ *  @date 2025.02.28
  *  @since 0.0.1
  */
 class AuthExprCalc
 {
   public:
     /**
-     *  Constructor.
-     *  @param authExpr Authority expression to be calculated.
+     * Constructor.
+     * @param authExpr Authority expression to be calculated.
+     * @date 2025.02.28
      */
     AuthExprCalc(const std::string &authExpr);
 
     /**
-     *  Calculate the result of authority expression.
+     * @brief Reset the calculator.
+     * @date 2025.02.28
+     * @since 0.3.7
+     */
+    void reset();
+
+    /**
+     * @brief Calculate the result of authority expression.
      *
-     *  The authority expression grammar is as follows:
-     *  @code
-     *  <expr> ::= <term> {OR <term>}
-     *  <term> ::= <factor> {AND <factor>}
-     *  <factor> ::= [NOT] LPAREN <expr> RPAREN | [NOT] <bool_expr>
-     *  <bool_expr> ::= FUNC LPAREN <str_list> RPAREN | FUNC LPAREN STR RPAREN
-     *  <str_list> ::= STR {COMMA STR}
-     *  @endcode
+     * The authority expression grammar is as follows:
+     * @code
+     * <expr> ::= <term> {OR <term>}
+     * <term> ::= <factor> {AND <factor>}
+     * <factor> ::= [NOT] LPAREN <expr> RPAREN | [NOT] <bool_expr>
+     * <bool_expr> ::= FUNC LPAREN <str_list> RPAREN | FUNC LPAREN STR RPAREN
+     * <str_list> ::= STR {COMMA STR}
+     * @endcode
      *
-     *  @param authorities A list of authorities.
-     *  @return `true` if the authority expression is satisfied, `false`
-     *  otherwise.
-     *  @throws std::runtime_error If the input expression is invalid.
+     * @param authorities A list of authorities.
+     * @return `true` if the authority expression is satisfied, `false`
+     * otherwise.
+     * @throws std::runtime_error If the input expression is invalid.
+     *
+     * @date 2025.02.28
      */
     bool calc(const std::vector<std::string> &authorities);
 
